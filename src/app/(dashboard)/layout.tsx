@@ -13,11 +13,17 @@ export default async function DashboardLayout({
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const member = await prisma.workspaceMember.findFirst({
-    where: { userId: session.user.id },
-    include: { workspace: true },
-    orderBy: { createdAt: "asc" },
-  });
+  let member;
+  try {
+    member = await prisma.workspaceMember.findFirst({
+      where: { userId: session.user.id },
+      include: { workspace: true },
+      orderBy: { createdAt: "asc" },
+    });
+  } catch (err) {
+    console.error("[layout] DB error:", err);
+    throw err;
+  }
 
   if (!member) redirect("/signup");
 
