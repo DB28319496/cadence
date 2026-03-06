@@ -33,6 +33,7 @@ export const authConfig: NextAuthConfig = {
         "/invite",
         "/intake",
         "/api/intake",
+        "/api/cron",
       ];
       const isPublic = publicRoutes.some((r) => pathname.startsWith(r));
       if (isPublic) return true;
