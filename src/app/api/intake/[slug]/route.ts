@@ -4,7 +4,7 @@ import { fireAutomations } from "@/lib/automation-engine";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic();
+
 
 const submitSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -101,6 +101,7 @@ async function classifyIntake(
 
   const stageList = pipeline.stages.map((s) => `${s.order + 1}. ${s.name}`).join("\n");
 
+  const anthropic = new Anthropic();
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 64,

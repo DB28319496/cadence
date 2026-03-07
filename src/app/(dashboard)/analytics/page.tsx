@@ -13,9 +13,11 @@ export default async function AnalyticsPage() {
   });
   if (!member) redirect("/login");
 
+  const wid = member.workspaceId;
+
   const [clients, stages, emailCount] = await Promise.all([
     prisma.client.findMany({
-      where: { workspaceId: member.workspaceId },
+      where: { workspaceId: wid },
       select: {
         id: true,
         status: true,
@@ -26,18 +28,23 @@ export default async function AnalyticsPage() {
       },
     }),
     prisma.stage.findMany({
-      where: { pipeline: { workspaceId: member.workspaceId } },
+      where: { pipeline: { workspaceId: wid } },
       include: { pipeline: { select: { id: true, name: true } } },
       orderBy: [{ pipeline: { createdAt: "asc" } }, { order: "asc" }],
     }),
+    // Use workspaceId directly (avoids JOIN through nullable clientId relation)
     prisma.emailLog.count({
-      where: { client: { workspaceId: member.workspaceId } },
+      where: {
+        OR: [
+          { workspaceId: wid },
+          { client: { workspaceId: wid } },
+        ],
+      },
     }),
   ]);
 
   const now = Date.now();
 
-  // ── Summary stats ────────────────────────────────────────────────────────────
   const active = clients.filter((c) => c.status === "ACTIVE");
   const completed = clients.filter((c) => c.status === "COMPLETED").length;
   const lost = clients.filter((c) => c.status === "LOST").length;
@@ -45,7 +52,6 @@ export default async function AnalyticsPage() {
     completed + lost > 0 ? Math.round((completed / (completed + lost)) * 100) : null;
   const pipelineValue = active.reduce((sum, c) => sum + (c.projectValue ?? 0), 0);
 
-  // ── Stage stats ──────────────────────────────────────────────────────────────
   const stageStats = stages.map((s) => {
     const inStage = clients.filter(
       (c) => c.currentStageId === s.id && c.status === "ACTIVE"
@@ -69,7 +75,6 @@ export default async function AnalyticsPage() {
           )
         : 0;
     const totalValue = inStage.reduce((sum, c) => sum + (c.projectValue ?? 0), 0);
-
     return {
       id: s.id,
       name: s.name,
@@ -84,7 +89,6 @@ export default async function AnalyticsPage() {
     };
   });
 
-  // ── Monthly intake (last 6 months) ──────────────────────────────────────────
   const monthlyIntake: { month: string; count: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date();
@@ -96,13 +100,9 @@ export default async function AnalyticsPage() {
       const cd = new Date(c.createdAt);
       return cd.getFullYear() === y && cd.getMonth() === m;
     }).length;
-    monthlyIntake.push({
-      month: d.toLocaleString("default", { month: "short" }),
-      count,
-    });
+    monthlyIntake.push({ month: d.toLocaleString("default", { month: "short" }), count });
   }
 
-  // ── Status breakdown ─────────────────────────────────────────────────────────
   const statusMap: Record<string, { count: number; value: number }> = {};
   for (const c of clients) {
     if (!statusMap[c.status]) statusMap[c.status] = { count: 0, value: 0 };
