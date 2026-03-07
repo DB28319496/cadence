@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { MERGE_FIELD_TOKENS } from "@/lib/email";
+import { MERGE_FIELD_TOKENS, applyMergeFields } from "@/lib/email";
 
 const TEMPLATE_TYPES = [
   { value: "WELCOME", label: "Welcome" },
@@ -39,6 +39,19 @@ const TEMPLATE_TYPES = [
   { value: "REMINDER", label: "Reminder" },
   { value: "CUSTOM", label: "Custom" },
 ];
+
+const SAMPLE_MERGE_DATA = {
+  client_name: "Jane Smith",
+  client_email: "jane@example.com",
+  client_phone: "(555) 867-5309",
+  project_type: "Website Redesign",
+  project_value: "$4,800",
+  stage_name: "Design Review",
+  workspace_name: "Acme Studio",
+  company_name: "Acme Studio",
+  portal_url: "https://app.example.com/portal/abc123",
+  days_in_stage: "3",
+};
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -58,6 +71,27 @@ export type TemplateRow = {
   isActive: boolean;
   _count: { emailLogs: number };
 };
+
+function LivePreview({ subject, body }: { subject: string; body: string }) {
+  const renderedSubject = applyMergeFields(subject, SAMPLE_MERGE_DATA);
+  const renderedBody = applyMergeFields(body, SAMPLE_MERGE_DATA);
+
+  return (
+    <div className="flex flex-col h-full border rounded-md overflow-hidden bg-white">
+      <div className="px-3 py-2 border-b bg-muted/40">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</p>
+      </div>
+      <div className="px-4 py-3 border-b bg-gray-50">
+        <p className="text-[10px] text-muted-foreground">Subject</p>
+        <p className="text-sm font-medium truncate">{renderedSubject || <span className="italic text-muted-foreground">No subject</span>}</p>
+      </div>
+      <div
+        className="flex-1 overflow-y-auto px-4 py-3 text-sm"
+        dangerouslySetInnerHTML={{ __html: renderedBody || "<p class=\"text-gray-400 italic\">Body will appear here…</p>" }}
+      />
+    </div>
+  );
+}
 
 export function TemplateDialog({
   open,
@@ -82,6 +116,9 @@ export function TemplateDialog({
       body: "",
     },
   });
+
+  const watchedSubject = useWatch({ control: form.control, name: "subject" });
+  const watchedBody = useWatch({ control: form.control, name: "body" });
 
   useEffect(() => {
     if (open) {
@@ -122,116 +159,124 @@ export function TemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Template" : "New Template"}</DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Template Name *</FormLabel>
-                    <FormControl>
-                      <Input {...field} className="h-9" placeholder="e.g. Welcome Email" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+        <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4 min-h-0">
+          {/* Left: form */}
+          <div className="overflow-y-auto pr-1">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Template Name *</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="h-9" placeholder="e.g. Welcome Email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Type</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {TEMPLATE_TYPES.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="subject"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Subject Line *</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <Input {...field} className="h-9" placeholder="e.g. Welcome to {{workspace_name}}!" />
                       </FormControl>
-                      <SelectContent>
-                        {TEMPLATE_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>
-                            {t.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-            </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="subject"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Subject Line *</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="h-9" placeholder="e.g. Welcome to {{workspace_name}}!" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                {/* Merge fields */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">
+                    Merge fields — click to insert into body:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MERGE_FIELD_TOKENS.map((t) => (
+                      <button
+                        key={t.token}
+                        type="button"
+                        onClick={() => insertToken(t.token)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted hover:bg-muted/70 text-xs font-mono transition-colors"
+                      >
+                        <Copy className="h-2.5 w-2.5" />
+                        {t.token}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Merge fields reference */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1.5">
-                Merge fields — click to insert into body:
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {MERGE_FIELD_TOKENS.map((t) => (
-                  <button
-                    key={t.token}
-                    type="button"
-                    onClick={() => insertToken(t.token)}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted hover:bg-muted/70 text-xs font-mono transition-colors"
-                  >
-                    <Copy className="h-2.5 w-2.5" />
-                    {t.token}
-                  </button>
-                ))}
-              </div>
-            </div>
+                <FormField
+                  control={form.control}
+                  name="body"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Body (HTML) *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={12}
+                          className="resize-y font-mono text-xs"
+                          placeholder={"<p>Hi {{client_name}},</p>\n<p>Welcome to {{workspace_name}}!</p>"}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="body"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Body (HTML) *</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      rows={12}
-                      className="resize-y font-mono text-xs"
-                      placeholder={"<p>Hi {{client_name}},</p>\n<p>Welcome to {{workspace_name}}!</p>"}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" size="sm" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" disabled={saving}>
+                    {saving && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                    {isEdit ? "Save Changes" : "Create Template"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={saving}>
-                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-                {isEdit ? "Save Changes" : "Create Template"}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          {/* Right: live preview */}
+          <LivePreview subject={watchedSubject} body={watchedBody} />
+        </div>
       </DialogContent>
     </Dialog>
   );

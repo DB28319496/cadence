@@ -29,6 +29,7 @@ model Workspace {
   emailTemplates  EmailTemplate[]
   automationRules AutomationRule[]
   invitations     Invitation[]
+  emailLogs       EmailLog[]
 }
 
 model User {
@@ -232,14 +233,18 @@ model EmailLog {
   body             String
   sentAt           DateTime @default(now())
   status           String   @default("SENT")
-  clientId         String
+  clientId         String?
+  workspaceId      String?
   templateId       String?
   automationRuleId String?
 
-  client   Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workspace     Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template      EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  automationRule AutomationRule? @relation(fields: [automationRuleId], references: [id], onDelete: SetNull)
 
   @@index([clientId, sentAt])
+  @@index([workspaceId, sentAt])
 }
 
 // ==================== AUTOMATION ENGINE ====================
@@ -261,6 +266,7 @@ model AutomationRule {
   workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   stage     Stage?         @relation(fields: [stageId], references: [id], onDelete: SetNull)
   template  EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  emailLogs EmailLog[]
 }
 
 // ==================== NEXTAUTH MODELS ====================

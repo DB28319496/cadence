@@ -9,16 +9,15 @@ export async function GET(req: NextRequest) {
   }
 
   const clients = await prisma.client.findMany({
-    where: { status: "ACTIVE", stageEnteredAt: { not: null } },
+    where: { status: "ACTIVE" },
     include: {
       workspace: {
-        select: { id: true, name: true, emailFromName: true, emailReplyTo: true },
+        select: { id: true, name: true, emailFromName: true, emailReplyTo: true, portalEnabled: true },
       },
       currentStage: { select: { id: true, name: true } },
     },
   });
 
-  let checked = 0;
   let fired = 0;
 
   for (const client of clients) {
@@ -28,32 +27,17 @@ export async function GET(req: NextRequest) {
       (Date.now() - new Date(client.stageEnteredAt).getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    // Only fire if exactly on the day (prevents duplicate fires if cron runs multiple times)
-    const alreadySentToday = await prisma.emailLog.findFirst({
-      where: {
-        clientId: client.id,
-        sentAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-        },
-        automationRule: {
-          triggerType: "TIME_IN_STAGE",
-          triggerConfig: { contains: client.currentStageId },
-        },
-      },
-    });
-    if (alreadySentToday) continue;
-
+    // Lifetime dedup is handled inside fireAutomations — no duplicate check needed here
     await fireAutomations(
       { type: "TIME_IN_STAGE", stageId: client.currentStageId, daysInStage },
-      client,
+      { ...client, portalToken: client.portalToken ?? null, stageEnteredAt: client.stageEnteredAt },
       client.workspace,
       client.currentStage.name
     ).catch(console.error);
 
-    checked++;
     fired++;
   }
 
   console.log(`[cron] checked ${clients.length} clients, triggered automations for ${fired}`);
-  return NextResponse.json({ ok: true, clients: clients.length, checked, fired });
+  return NextResponse.json({ ok: true, clients: clients.length, fired });
 }

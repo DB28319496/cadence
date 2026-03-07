@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Zap, Plus, Trash2, Loader2, ArrowRight } from "lucide-react";
+import { Zap, Plus, Trash2, Loader2, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ const TRIGGER_LABELS: Record<string, string> = {
   CLIENT_CREATED: "Client is created",
   STAGE_ENTRY: "Client enters",
   TIME_IN_STAGE: "Client in stage for",
+  WEEKLY_SUMMARY: "Every Monday",
 };
 
 function triggerDescription(rule: AutomationRow): string {
@@ -145,15 +146,26 @@ export function AutomationsClient({
                 <div
                   className={cn(
                     "flex h-9 w-9 items-center justify-center rounded-lg shrink-0",
-                    rule.isActive ? "bg-yellow-50" : "bg-muted"
+                    rule.triggerType === "WEEKLY_SUMMARY"
+                      ? rule.isActive ? "bg-violet-50" : "bg-muted"
+                      : rule.isActive ? "bg-yellow-50" : "bg-muted"
                   )}
                 >
-                  <Zap
-                    className={cn(
-                      "h-4.5 w-4.5",
-                      rule.isActive ? "text-yellow-500" : "text-muted-foreground"
-                    )}
-                  />
+                  {rule.triggerType === "WEEKLY_SUMMARY" ? (
+                    <Sparkles
+                      className={cn(
+                        "h-4 w-4",
+                        rule.isActive ? "text-violet-500" : "text-muted-foreground"
+                      )}
+                    />
+                  ) : (
+                    <Zap
+                      className={cn(
+                        "h-4 w-4",
+                        rule.isActive ? "text-yellow-500" : "text-muted-foreground"
+                      )}
+                    />
+                  )}
                 </div>
 
                 {/* Info */}
@@ -163,7 +175,10 @@ export function AutomationsClient({
                     <span className="truncate">{triggerDescription(rule)}</span>
                     <ArrowRight className="h-3 w-3 shrink-0" />
                     <span className="truncate">
-                      Send <span className="font-medium text-foreground">{rule.template?.name ?? "email"}</span>
+                      {rule.triggerType === "WEEKLY_SUMMARY"
+                        ? <span className="font-medium text-violet-600">AI Summary (Claude)</span>
+                        : <>Send <span className="font-medium text-foreground">{rule.template?.name ?? "email"}</span></>
+                      }
                     </span>
                   </div>
                 </div>

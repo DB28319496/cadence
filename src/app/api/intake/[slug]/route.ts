@@ -35,7 +35,7 @@ export async function POST(
   const { slug } = await params;
   const workspace = await prisma.workspace.findUnique({
     where: { slug },
-    select: { id: true, name: true, brandColor: true, intakeEnabled: true, emailFromName: true, emailReplyTo: true },
+    select: { id: true, name: true, brandColor: true, intakeEnabled: true, emailFromName: true, emailReplyTo: true, portalEnabled: true },
   });
 
   if (!workspace) return NextResponse.json({ error: "Not found" }, { status: 404 });

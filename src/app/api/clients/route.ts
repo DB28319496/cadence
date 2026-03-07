@@ -101,7 +101,11 @@ export async function POST(req: NextRequest) {
   });
 
   // Fire automation rules (non-blocking — don't fail the request if automation fails)
-  fireAutomations({ type: "CLIENT_CREATED" }, client, workspace).catch(console.error);
+  fireAutomations(
+    { type: "CLIENT_CREATED" },
+    { ...client, portalToken: client.portalToken ?? null, stageEnteredAt: client.stageEnteredAt ?? null },
+    { ...workspace, portalEnabled: workspace.portalEnabled ?? false }
+  ).catch(console.error);
 
   return NextResponse.json(client, { status: 201 });
 }

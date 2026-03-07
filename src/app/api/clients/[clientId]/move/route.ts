@@ -18,6 +18,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const fromStageId = existing.currentStageId ?? undefined;
   const { stageId } = await req.json();
   if (!stageId) return NextResponse.json({ error: "stageId is required" }, { status: 400 });
 
@@ -49,10 +50,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   });
 
   // Fire STAGE_ENTRY automation rules (non-blocking)
+  // Enhancement 1: pass fromStageId for from/to stage matching
   fireAutomations(
-    { type: "STAGE_ENTRY", stageId },
-    client,
-    workspace,
+    { type: "STAGE_ENTRY", stageId, fromStageId },
+    { ...client, portalToken: client.portalToken ?? null, stageEnteredAt: client.stageEnteredAt ?? null },
+    { ...workspace, portalEnabled: workspace.portalEnabled ?? false },
     stage.name
   ).catch(console.error);
 

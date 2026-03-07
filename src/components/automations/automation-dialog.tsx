@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export type StageOption = { id: string; name: string; pipelineName: string };
@@ -50,14 +50,15 @@ const TRIGGER_TYPES = [
   { value: "CLIENT_CREATED", label: "Client is created" },
   { value: "STAGE_ENTRY", label: "Client enters a stage" },
   { value: "TIME_IN_STAGE", label: "Client has been in a stage for N days" },
+  { value: "WEEKLY_SUMMARY", label: "Weekly AI summary (every Monday)" },
 ];
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
-  triggerType: z.enum(["CLIENT_CREATED", "STAGE_ENTRY", "TIME_IN_STAGE"]),
+  triggerType: z.enum(["CLIENT_CREATED", "STAGE_ENTRY", "TIME_IN_STAGE", "WEEKLY_SUMMARY"]),
   stageId: z.string().optional(),
   days: z.coerce.number().int().min(1).optional(),
-  templateId: z.string().min(1, "Template is required"),
+  templateId: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -90,6 +91,7 @@ export function AutomationDialog({
   const triggerType = form.watch("triggerType");
   const needsStage = triggerType === "STAGE_ENTRY" || triggerType === "TIME_IN_STAGE";
   const needsDays = triggerType === "TIME_IN_STAGE";
+  const isWeeklySummary = triggerType === "WEEKLY_SUMMARY";
 
   useEffect(() => {
     if (open) {
@@ -111,6 +113,10 @@ export function AutomationDialog({
       form.setError("days", { message: "Days is required" });
       return;
     }
+    if (!isWeeklySummary && !values.templateId) {
+      form.setError("templateId", { message: "Template is required" });
+      return;
+    }
 
     const triggerConfig: Record<string, unknown> = {};
     if (needsStage && values.stageId) triggerConfig.stageId = values.stageId;
@@ -125,9 +131,9 @@ export function AutomationDialog({
           name: values.name,
           triggerType: values.triggerType,
           triggerConfig,
-          actionType: "SEND_EMAIL",
+          actionType: isWeeklySummary ? "AI_SUMMARY" : "SEND_EMAIL",
           actionConfig: {},
-          templateId: values.templateId,
+          templateId: isWeeklySummary ? undefined : values.templateId,
           stageId: needsStage ? (values.stageId ?? null) : null,
         }),
       });
@@ -246,34 +252,49 @@ export function AutomationDialog({
               />
             )}
 
-            <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Action:</span> Send email to client
-            </div>
+            {isWeeklySummary ? (
+              <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 flex items-start gap-2">
+                <Sparkles className="h-4 w-4 text-violet-500 mt-0.5 shrink-0" />
+                <div className="text-sm text-violet-800">
+                  <p className="font-medium">AI-Generated Summary</p>
+                  <p className="text-xs text-violet-600 mt-0.5">
+                    Every Monday, Claude automatically writes a personalized business summary
+                    and emails it to all workspace owners and admins. No template needed.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Action:</span> Send email to client
+                </div>
 
-            <FormField
-              control={form.control}
-              name="templateId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Email Template *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="templateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Email Template *</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select a template" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {templates.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>

@@ -55,6 +55,18 @@ export async function POST(req: NextRequest) {
           role: "OWNER",
         },
       });
+
+      // Auto-create weekly AI summary rule for new workspaces
+      await tx.automationRule.create({
+        data: {
+          name: "Weekly AI Summary",
+          triggerType: "WEEKLY_SUMMARY",
+          triggerConfig: JSON.stringify({}),
+          actionType: "AI_SUMMARY",
+          actionConfig: JSON.stringify({}),
+          workspaceId: workspace.id,
+        },
+      });
     });
 
     return NextResponse.json({ ok: true }, { status: 201 });

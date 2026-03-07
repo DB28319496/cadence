@@ -12,6 +12,9 @@ export type MergeFields = {
   project_value?: string;
   stage_name?: string;
   workspace_name?: string;
+  company_name?: string;
+  portal_url?: string;
+  days_in_stage?: string;
 };
 
 export const MERGE_FIELD_TOKENS: { token: string; label: string }[] = [
@@ -22,6 +25,9 @@ export const MERGE_FIELD_TOKENS: { token: string; label: string }[] = [
   { token: "{{project_value}}", label: "Project Value" },
   { token: "{{stage_name}}", label: "Stage Name" },
   { token: "{{workspace_name}}", label: "Workspace Name" },
+  { token: "{{company_name}}", label: "Company Name (alias)" },
+  { token: "{{portal_url}}", label: "Client Portal URL" },
+  { token: "{{days_in_stage}}", label: "Days in Current Stage" },
 ];
 
 export function applyMergeFields(template: string, fields: MergeFields): string {
