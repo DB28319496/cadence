@@ -190,7 +190,7 @@ export function TemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="w-[92vw] max-w-6xl h-[92vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[92vw] sm:max-w-[92vw] h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Template" : "New Template"}</DialogTitle>
         </DialogHeader>
