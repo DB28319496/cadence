@@ -9,6 +9,7 @@ import { ClientEditForm } from "@/components/clients/client-edit-form";
 import { ClientActivity } from "@/components/clients/client-activity";
 import { ClientChecklist } from "@/components/clients/client-checklist";
 import { ClientDocuments } from "@/components/clients/client-documents";
+import { ClientAiSummary } from "@/components/clients/client-ai-summary";
 
 const STATUS_STYLES: Record<string, string> = {
   ACTIVE: "bg-blue-100 text-blue-700",
@@ -191,6 +192,9 @@ export default async function ClientDetailPage({
 
           {/* Right: Checklist + Activity */}
           <div className="overflow-auto p-6 space-y-6">
+            {/* AI Summary */}
+            <ClientAiSummary clientId={client.id} />
+
             {/* Checklist */}
             {client.currentStage && (
               <div>

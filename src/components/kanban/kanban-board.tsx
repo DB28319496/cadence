@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { ClientSlideOver } from "./client-slide-over";
 import { AddClientDialog } from "./add-client-dialog";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, Heart } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +84,23 @@ function ClientCard({
   const checklistPct =
     checklist.length > 0 ? Math.round((completions.length / checklist.length) * 100) : -1;
 
+  // Health score: 0–100 based on days vs expected + checklist completion
+  const healthScore = (() => {
+    let score = 100;
+    if (stage?.daysExpected && stage.daysExpected > 0) {
+      const ratio = days / stage.daysExpected;
+      if (ratio > 1.5) score -= 50;
+      else if (ratio > 1.0) score -= 30;
+      else if (ratio > 0.75) score -= 10;
+    }
+    if (checklistPct >= 0) score -= Math.round((1 - checklistPct / 100) * 20);
+    return Math.max(0, Math.min(100, score));
+  })();
+  const healthColor =
+    healthScore >= 75 ? "text-emerald-600 bg-emerald-50" :
+    healthScore >= 45 ? "text-amber-600 bg-amber-50" :
+    "text-red-600 bg-red-50";
+
   const initials = client.name
     .split(" ")
     .slice(0, 2)
@@ -132,18 +149,32 @@ function ClientCard({
         <span className="text-xs font-semibold">
           {client.projectValue ? formatCurrency(client.projectValue) : "—"}
         </span>
-        <span
-          className={cn(
-            "text-xs px-1.5 py-0.5 rounded-full font-medium",
-            isOverdue
-              ? "bg-red-100 text-red-700"
-              : days <= 1
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-muted text-muted-foreground"
+        <div className="flex items-center gap-1">
+          <span
+            className={cn(
+              "text-xs px-1.5 py-0.5 rounded-full font-medium",
+              isOverdue
+                ? "bg-red-100 text-red-700"
+                : days <= 1
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {days}d
+          </span>
+          {stage?.daysExpected != null && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded font-semibold",
+                healthColor
+              )}
+              title={`Health: ${healthScore}/100`}
+            >
+              <Heart className="h-2.5 w-2.5" />
+              {healthScore}
+            </span>
           )}
-        >
-          {days}d
-        </span>
+        </div>
       </div>
 
       {checklistPct >= 0 && (

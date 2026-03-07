@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fireAutomations } from "@/lib/automation-engine";
 import { z } from "zod";
+import Anthropic from "@anthropic-ai/sdk";
+
+const anthropic = new Anthropic();
 
 const submitSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -72,5 +75,77 @@ export async function POST(
 
   fireAutomations({ type: "CLIENT_CREATED" }, client, workspace).catch(console.error);
 
+  // AI Intake Classifier — suggest best stage (non-blocking)
+  if (process.env.ANTHROPIC_API_KEY && (projectType || notes)) {
+    classifyIntake(client.id, workspace.id, workspace.name, projectType ?? null, notes ?? null).catch(
+      console.error
+    );
+  }
+
   return NextResponse.json({ success: true });
+}
+
+async function classifyIntake(
+  clientId: string,
+  workspaceId: string,
+  workspaceName: string,
+  projectType: string | null,
+  notes: string | null
+) {
+  // Get default pipeline stages
+  const pipeline = await prisma.pipeline.findFirst({
+    where: { workspaceId, isDefault: true },
+    include: { stages: { orderBy: { order: "asc" }, select: { id: true, name: true, order: true } } },
+  });
+  if (!pipeline || pipeline.stages.length === 0) return;
+
+  const stageList = pipeline.stages.map((s) => `${s.order + 1}. ${s.name}`).join("\n");
+
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 64,
+    messages: [
+      {
+        role: "user",
+        content: `Given these pipeline stages for ${workspaceName}:
+${stageList}
+
+A new client submitted an intake form:
+Project type: ${projectType ?? "Not specified"}
+Notes: ${notes ?? "None"}
+
+Which stage number should this client start in? Reply with ONLY the stage number (e.g. "2"). Default to 1 if uncertain.`,
+      },
+    ],
+  });
+
+  const text = message.content[0].type === "text" ? message.content[0].text.trim() : "1";
+  const stageIndex = parseInt(text.match(/\d+/)?.[0] ?? "1", 10) - 1;
+  const stage = pipeline.stages[Math.max(0, Math.min(stageIndex, pipeline.stages.length - 1))];
+
+  if (!stage || stage.order === 0) {
+    // Already in first stage or couldn't determine — just log suggestion
+    await prisma.activity.create({
+      data: {
+        type: "NOTE_ADDED",
+        title: `AI intake classifier: starting in "${stage?.name ?? pipeline.stages[0].name}"`,
+        clientId,
+      },
+    });
+    return;
+  }
+
+  // Move client to suggested stage
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { currentStageId: stage.id, pipelineId: pipeline.id, stageEnteredAt: new Date() },
+  });
+
+  await prisma.activity.create({
+    data: {
+      type: "STAGE_CHANGE",
+      title: `AI classified intake → "${stage.name}" based on project details`,
+      clientId,
+    },
+  });
 }

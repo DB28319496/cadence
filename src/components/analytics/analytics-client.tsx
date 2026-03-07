@@ -13,8 +13,10 @@ import {
   Pie,
   Legend,
 } from "recharts";
-import { Users, DollarSign, TrendingUp, Mail, Trophy, AlertTriangle } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Mail, Trophy, AlertTriangle, Sparkles, Loader2 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +138,26 @@ export function AnalyticsClient({
 }) {
   const overdueStages = stageStats.filter((s) => s.overdueCount > 0);
   const activeStageStats = stageStats.filter((s) => s.clientCount > 0);
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  async function fetchBottleneckInsights() {
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/bottleneck-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bottlenecks: overdueStages }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json() as { insights: string };
+      setAiInsights(data.insights);
+    } catch {
+      setAiInsights("Could not generate insights. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -371,6 +393,7 @@ export function AnalyticsClient({
             </div>
             <div className="divide-y divide-border/50">
               {overdueStages.map((s) => {
+
                 const pct = s.clientCount > 0
                   ? Math.round((s.overdueCount / s.clientCount) * 100)
                   : 0;
@@ -406,6 +429,44 @@ export function AnalyticsClient({
                   </div>
                 );
               })}
+            </div>
+
+            {/* AI Insights */}
+            <div className="border-t border-border/50 px-4 py-3">
+              {aiInsights ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                    <span className="text-xs font-semibold text-violet-700">AI Recommendations</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="ml-auto h-6 px-2 text-xs text-violet-600 hover:bg-violet-50"
+                      onClick={fetchBottleneckInsights}
+                      disabled={aiLoading}
+                    >
+                      {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Refresh"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
+                    {aiInsights}
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-violet-200 text-violet-700 hover:bg-violet-50"
+                  onClick={fetchBottleneckInsights}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? (
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Analyzing…</>
+                  ) : (
+                    <><Sparkles className="h-3.5 w-3.5 mr-1.5" />Get AI Recommendations</>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         )}
