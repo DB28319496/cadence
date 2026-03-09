@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  PNPM_VERSION = "10.30.3"
   PRISMA_CLI_QUERY_ENGINE_TYPE = "library"
 
 [[plugins]]
