@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOutAction } from "@/lib/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -83,7 +83,7 @@ export function Header({ workspaceName, userName, userEmail, userImage }: Header
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOutAction()}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Sign out
