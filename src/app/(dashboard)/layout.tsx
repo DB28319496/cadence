@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { SidebarProvider } from "@/components/dashboard/sidebar-context";
+import { DemoTour } from "@/components/demo-tour";
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({
@@ -40,6 +42,9 @@ export default async function DashboardLayout({
           />
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
+        <Suspense>
+          <DemoTour />
+        </Suspense>
       </div>
     </SidebarProvider>
   );
