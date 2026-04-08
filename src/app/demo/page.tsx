@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Building2, Loader2 } from "lucide-react";
+import { Building2, Loader2, Sparkles } from "lucide-react";
 
 export default function DemoPage() {
   const router = useRouter();
@@ -57,6 +57,13 @@ export default function DemoPage() {
             <p className="text-sm text-muted-foreground">
               Loading demo environment...
             </p>
+            <p className="text-xs text-muted-foreground/70 max-w-sm mx-auto pt-2">
+              You&apos;re viewing a pre-built real estate workspace. Real users get their workspace built by AI based on their business needs — pipelines, email templates, and automations, all tailored automatically.
+            </p>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
+              <Sparkles className="h-3 w-3" />
+              AI-Powered Setup
+            </div>
           </div>
         )}
       </div>

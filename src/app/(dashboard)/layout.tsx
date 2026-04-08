@@ -7,6 +7,7 @@ import { Header } from "@/components/dashboard/header";
 import { SidebarProvider } from "@/components/dashboard/sidebar-context";
 import { RoleProvider, type Role } from "@/components/dashboard/role-context";
 import { DemoTour } from "@/components/demo-tour";
+import { OnboardingReminder } from "@/components/dashboard/onboarding-reminder";
 import { RealtimeProvider } from "@/components/dashboard/realtime-provider";
 import { prisma } from "@/lib/prisma";
 
@@ -58,7 +59,10 @@ export default async function DashboardLayout({
               currentWorkspaceId={member.workspaceId}
             />
             <RealtimeProvider>
-              <main className="flex-1 overflow-auto">{children}</main>
+              <main className="flex-1 overflow-auto">
+                {!member.workspace.onboardingCompleted && <OnboardingReminder />}
+                {children}
+              </main>
             </RealtimeProvider>
           </div>
           <Suspense>

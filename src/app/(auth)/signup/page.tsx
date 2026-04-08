@@ -71,7 +71,7 @@ export default function SignupPage() {
         toast.error("Account created — please sign in");
         router.push("/login");
       } else {
-        router.push("/dashboard");
+        router.push("/onboarding");
         router.refresh();
       }
     } catch {

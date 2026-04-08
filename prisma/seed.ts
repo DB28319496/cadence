@@ -118,6 +118,7 @@ async function main() {
       emailFromName: "Prestige Realty Group",
       emailReplyTo: "hello@prestigerealty.com",
       portalEnabled: true,
+      onboardingCompleted: true,
     },
   });
 
