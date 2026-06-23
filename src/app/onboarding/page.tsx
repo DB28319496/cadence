@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { QuestionnaireForm } from "@/components/onboarding/questionnaire-form";
+import { OnboardingChooser } from "@/components/onboarding/onboarding-chooser";
+import { listBlueprintSummaries } from "@/lib/templates";
 import { Building2 } from "lucide-react";
 
 export default async function OnboardingPage() {
@@ -20,6 +21,9 @@ export default async function OnboardingPage() {
     redirect("/dashboard");
   }
 
+  const blueprints = listBlueprintSummaries();
+  const aiAvailable = !!process.env.ANTHROPIC_API_KEY;
+
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
       <header className="border-b border-border bg-background/80 backdrop-blur">
@@ -37,7 +41,7 @@ export default async function OnboardingPage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <QuestionnaireForm />
+        <OnboardingChooser blueprints={blueprints} aiAvailable={aiAvailable} />
       </main>
     </div>
   );

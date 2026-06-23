@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import {
+  extractOnboardingAnswers,
   generateWorkspaceFromAnswers,
   generatedToWorkspaceConfig,
 } from "@/lib/onboarding-ai";
@@ -11,39 +13,41 @@ import {
   persistWorkspaceConfig,
 } from "@/lib/workspace-setup";
 
-const answersSchema = z.object({
-  // Step 1 invites detail ("be as specific as you like"), so allow a full
-  // paragraph — consistent with the other free-text fields.
-  businessType: z.string().min(1).max(2000),
-  services: z.string().min(10).max(2000),
-  clientJourney: z.string().min(10).max(2000),
-  painPoints: z.string().min(5).max(2000),
-  tone: z.enum(["formal", "professional", "friendly"]),
-  teamSize: z.string().min(1).max(50),
+export const MAX_DOC_CHARS = 12_000;
+
+const bodySchema = z.object({
+  text: z.string().trim().min(40).max(MAX_DOC_CHARS),
 });
 
-const FIELD_LABELS: Record<string, string> = {
-  businessType: "Business type",
-  services: "Services",
-  clientJourney: "Client journey",
-  painPoints: "Pain points",
-  tone: "Tone",
-  teamSize: "Team size",
-};
-
+// On-ramp #3: paste a description / SOP / process doc. Extract the six
+// questionnaire fields, then reuse the existing generation + persistence path.
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => null);
-  const parsed = answersSchema.safeParse(body);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const field = FIELD_LABELS[String(issue.path[0])] ?? "Answer";
+  // Graceful degradation — this on-ramp requires the AI surface.
+  if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
-      { error: `${field}: ${issue.message}` },
+      { error: "AI setup is not available. Please pick a template instead." },
+      { status: 503 }
+    );
+  }
+
+  // Reuse the Upstash limiter (per-user) on this AI endpoint.
+  const { success, resetAt } = await rateLimit({
+    key: `onboarding-ai:${session.user.id}`,
+    limit: 5,
+    windowMs: 60_000,
+  });
+  if (!success) return rateLimitResponse(resetAt);
+
+  const body = await req.json().catch(() => null);
+  const parsed = bodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message },
       { status: 400 }
     );
   }
@@ -64,21 +68,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Call Claude to generate the configuration
-  const generated = await generateWorkspaceFromAnswers(parsed.data);
-  if (!generated) {
+  // Step A — extract the six fields from the pasted text.
+  const answers = await extractOnboardingAnswers(parsed.data.text);
+  if (!answers) {
     return NextResponse.json(
-      { error: "Failed to generate workspace. Please try again or skip setup." },
+      { error: "Couldn't read that document. Try adding more detail or use the questionnaire." },
       { status: 502 }
     );
   }
 
-  // Normalize → validate → persist through the shared path
+  // Step B — reuse the existing generator.
+  const generated = await generateWorkspaceFromAnswers(answers);
+  if (!generated) {
+    return NextResponse.json(
+      { error: "Failed to generate workspace. Please try again." },
+      { status: 502 }
+    );
+  }
+
+  // Normalize → validate → persist through the shared path.
   let config;
   try {
     config = validateWorkspaceConfig(generatedToWorkspaceConfig(generated));
   } catch (err) {
-    console.error("[Onboarding generate] Invalid generated config:", err);
+    console.error("[Onboarding from-text] Invalid generated config:", err);
     return NextResponse.json(
       { error: "Generated workspace was invalid. Please try again." },
       { status: 502 }
@@ -89,7 +102,7 @@ export async function POST(req: NextRequest) {
     await persistWorkspaceConfig(member.workspaceId, config);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[Onboarding generate] DB error:", err);
+    console.error("[Onboarding from-text] DB error:", err);
     return NextResponse.json(
       { error: "Failed to save workspace configuration" },
       { status: 500 }

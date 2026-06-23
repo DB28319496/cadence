@@ -1,0 +1,165 @@
+{
+  "blueprint": {
+    "id": "switchboard-ai-receptionist",
+    "name": "AI Receptionist Agency",
+    "description": "Done-for-you AI phone receptionist agency for local appointment-based service businesses (auto, HVAC, home services). Clients = the shops you onboard.",
+    "vertical": "agency",
+    "tone": "professional",
+
+    "pipeline": {
+      "name": "Switchboard Client Lifecycle",
+      "isDefault": true
+    },
+
+    "stages": [
+      {
+        "name": "Lead / Qualify",
+        "description": "A prospect shop, not yet qualified. Confirm fit before investing time.",
+        "color": "#6b7280",
+        "daysExpected": 3,
+        "checklist": [
+          { "text": "Confirm phone-driven, enough call volume, can afford ~$1k/mo", "owner": "team" },
+          { "text": "Log lead and source", "owner": "team" },
+          { "text": "Disqualify politely if not a fit (protect your time)", "owner": "team" }
+        ]
+      },
+      {
+        "name": "Missed-Call Audit",
+        "description": "Measure the prospect's real missed/after-hours call volume. The wedge — their own numbers sell the deal.",
+        "color": "#ff6a1a",
+        "daysExpected": 14,
+        "checklist": [
+          { "text": "Get phone-system / VoIP log access, or set up a tracking number", "owner": "team" },
+          { "text": "Grant access to call data / Google Business Profile", "owner": "client" },
+          { "text": "Run 1-2 week measurement of missed + after-hours calls", "owner": "team" },
+          { "text": "Produce one-page 'what last month cost you' report", "owner": "team" }
+        ]
+      },
+      {
+        "name": "Discovery & Demo",
+        "description": "Walk the owner through their own audit numbers and demo a live agent on their shop's flow.",
+        "color": "#5b9bd5",
+        "daysExpected": 7,
+        "checklist": [
+          { "text": "Walk owner through their measured leak (dollar figure)", "owner": "team" },
+          { "text": "Capture avg ticket, close rate, hot-job rules, tech stack", "owner": "team" },
+          { "text": "Build + run a live demo agent on their shop", "owner": "team" },
+          { "text": "Attend the discovery / demo call", "owner": "client" }
+        ]
+      },
+      {
+        "name": "Proposal & Close",
+        "description": "Translate findings into a tiered proposal anchored to the measured leak. No build until paid.",
+        "color": "#9b8cff",
+        "daysExpected": 7,
+        "checklist": [
+          { "text": "Send tiered proposal anchored to the measured leak", "owner": "team" },
+          { "text": "Present overflow/after-hours-only start (no downside)", "owner": "team" },
+          { "text": "Sign the services agreement", "owner": "client" },
+          { "text": "Pay setup fee + first month (gate: no build until paid)", "owner": "client" }
+        ]
+      },
+      {
+        "name": "Onboarding & Build",
+        "description": "Collect assets and configure + test the agent. Reliability is the product — this stage is where it's won.",
+        "color": "#f5a623",
+        "daysExpected": 7,
+        "checklist": [
+          { "text": "Complete onboarding form: hours, services, pricing, FAQs, hot-job rules", "owner": "client" },
+          { "text": "Grant calendar + phone-routing access", "owner": "client" },
+          { "text": "Clone vertical agent template + inject the build spec", "owner": "team" },
+          { "text": "Wire booking + CRM logging + guardrails + missed-call text-back", "owner": "team" },
+          { "text": "Run full test script - zero booking errors before launch", "owner": "team" }
+        ]
+      },
+      {
+        "name": "Launch & Stabilize",
+        "description": "Go live on overflow/after-hours only, watch closely, and bank the first proof.",
+        "color": "#39d98a",
+        "daysExpected": 14,
+        "checklist": [
+          { "text": "Configure overflow / after-hours call forwarding (number unchanged)", "owner": "team" },
+          { "text": "Go live + run the 48-hour active watch", "owner": "team" },
+          { "text": "Daily call-log scan for the first 2 weeks", "owner": "team" },
+          { "text": "Confirm first recovered-jobs data point", "owner": "team" }
+        ]
+      },
+      {
+        "name": "Live — ROI & Retention",
+        "description": "Active client. Prove ROI monthly so renewal is automatic, and expand the account.",
+        "color": "#2bb673",
+        "daysExpected": 30,
+        "checklist": [
+          { "text": "Send the monthly ROI report (calls caught, jobs booked, revenue recovered)", "owner": "team" },
+          { "text": "Monthly check-in + surface an upsell", "owner": "team" },
+          { "text": "Weekly QA / drift review on the agent", "owner": "team" },
+          { "text": "Ask for a referral after a strong month", "owner": "team" }
+        ]
+      }
+    ],
+
+    "emailTemplates": [
+      {
+        "name": "Audit Request Welcome",
+        "type": "WELCOME",
+        "subject": "Let's measure what your phone is costing you, {{client_name}}",
+        "body": "Hi {{client_name}},\n\nThanks for the interest. Before I pitch you anything, I'd like to simply measure what {{company_name}}'s phone is actually costing you right now — how many calls go missed or after-hours, and what that's worth.\n\nReply here and I'll get the quick audit set up. No charge, no obligation.\n\n— {{workspace_name}}"
+      },
+      {
+        "name": "Audit Report Ready",
+        "type": "STAGE_CHANGE",
+        "subject": "Your missed-call numbers are in",
+        "body": "Hi {{client_name}},\n\nI finished measuring {{company_name}}'s calls. The short version: you're leaving real money on the table every month to voicemail and after-hours.\n\nI've put your numbers on one page and I'd love to walk you through them — and let you hear a version of an answering agent built for your shop. When works for a quick call?\n\n— {{workspace_name}}"
+      },
+      {
+        "name": "Proposal Follow-up",
+        "type": "FOLLOW_UP",
+        "subject": "Still losing those after-hours calls?",
+        "body": "Hi {{client_name}},\n\nJust circling back on the proposal. Every week we wait, more calls go to voicemail at {{company_name}}.\n\nQuick reminder: we start on overflow and after-hours only, so there's no downside — worst case you're exactly where you are now, best case you recover jobs. Happy to answer any questions.\n\n— {{workspace_name}}"
+      },
+      {
+        "name": "Onboarding Asset Request",
+        "type": "STAGE_CHANGE",
+        "subject": "A few quick things to get you live",
+        "body": "Hi {{client_name}},\n\nWelcome aboard! To build your agent I need a few details from you — your hours, services and rough pricing, your most common questions, and access to your calendar.\n\nThe fastest way is your client portal: {{portal_url}}. Knock those out and we'll have you live within the week.\n\n— {{workspace_name}}"
+      },
+      {
+        "name": "You're Live",
+        "type": "STAGE_CHANGE",
+        "subject": "{{company_name}} is live — here's what to expect",
+        "body": "Hi {{client_name}},\n\nYour AI receptionist is live and catching your overflow and after-hours calls. Your number hasn't changed — we're just making sure nothing rolls to voicemail.\n\nI'll be watching closely the first couple of days. You'll get a text whenever a high-value job comes in, and a full report at the end of the month.\n\n— {{workspace_name}}"
+      },
+      {
+        "name": "Monthly ROI Report",
+        "type": "REMINDER",
+        "subject": "What we caught for {{company_name}} this month",
+        "body": "Hi {{client_name}},\n\nHere's your month: the calls we answered, the jobs we booked, and the revenue we recovered that would otherwise have gone to voicemail.\n\nAnything sounding off on calls, or any service/price change I should load? And if it's been a good month — who else do you know losing calls the way you were?\n\n— {{workspace_name}}"
+      }
+    ],
+
+    "automationRules": [
+      { "name": "Welcome new lead", "triggerType": "CLIENT_CREATED", "templateName": "Audit Request Welcome", "triggerConfig": {} },
+      { "name": "Send audit report", "triggerType": "STAGE_ENTRY", "templateName": "Audit Report Ready", "triggerConfig": { "stageName": "Discovery & Demo" } },
+      { "name": "Nudge stalled proposal", "triggerType": "TIME_IN_STAGE", "templateName": "Proposal Follow-up", "triggerConfig": { "stageName": "Proposal & Close", "days": 3 } },
+      { "name": "Request onboarding assets", "triggerType": "STAGE_ENTRY", "templateName": "Onboarding Asset Request", "triggerConfig": { "stageName": "Onboarding & Build" } },
+      { "name": "Go-live note", "triggerType": "STAGE_ENTRY", "templateName": "You're Live", "triggerConfig": { "stageName": "Launch & Stabilize" } },
+      { "name": "Monthly ROI report", "triggerType": "TIME_IN_STAGE", "templateName": "Monthly ROI Report", "triggerConfig": { "stageName": "Live — ROI & Retention", "days": 30 } }
+    ],
+
+    "customFields": [
+      { "label": "Vertical", "key": "vertical", "type": "SELECT", "options": ["Auto Repair", "HVAC", "Plumbing", "Home Services", "Other"] },
+      { "label": "Average ticket ($)", "key": "avg_ticket", "type": "NUMBER" },
+      { "label": "Inbound close rate (%)", "key": "close_rate", "type": "NUMBER" },
+      { "label": "Calls missed / week", "key": "calls_missed_week", "type": "NUMBER" },
+      { "label": "% after-hours", "key": "pct_after_hours", "type": "NUMBER" },
+      { "label": "No-show rate (%)", "key": "no_show_rate", "type": "NUMBER" },
+      { "label": "Measured monthly leak ($)", "key": "monthly_leak", "type": "NUMBER" },
+      { "label": "Plan tier", "key": "tier", "type": "SELECT", "options": ["Catch", "Front Desk", "Growth"] },
+      { "label": "Coverage scope", "key": "coverage", "type": "SELECT", "options": ["Overflow only", "After-hours", "Full"] },
+      { "label": "MRR ($)", "key": "mrr", "type": "NUMBER" },
+      { "label": "Setup paid", "key": "setup_paid", "type": "CHECKBOX" },
+      { "label": "Phone system", "key": "phone_system", "type": "TEXT" },
+      { "label": "CRM / calendar", "key": "crm_calendar", "type": "TEXT" }
+    ]
+  }
+}
