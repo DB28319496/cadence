@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Send invite email (non-blocking)
-  const inviteUrl = `${process.env.NEXTAUTH_URL ?? "http://localhost:3002"}/invite/${invitation.token}`;
+  const inviteUrl = `${process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3002"}/invite/${invitation.token}`;
   sendEmail({
     to: email,
     subject: `You've been invited to join ${workspace.name} on Cadence`,

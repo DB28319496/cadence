@@ -44,7 +44,7 @@ export function generateTrackingId(): string {
 }
 
 export function injectTrackingPixel(html: string, trackingId: string): string {
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3002";
+  const baseUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3002";
   const pixel = `<img src="${baseUrl}/api/email-tracking?id=${trackingId}" width="1" height="1" style="display:none" alt="" />`;
   // Insert before closing </body> or append to end
   if (html.includes("</body>")) {

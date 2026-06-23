@@ -57,7 +57,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     (Date.now() - new Date(client.stageEnteredAt).getTime()) / 86_400_000
   );
   const portalUrl = client.portalToken
-    ? `${process.env.NEXTAUTH_URL ?? "http://localhost:3002"}/portal/${client.portalToken}`
+    ? `${process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3002"}/portal/${client.portalToken}`
     : "";
 
   const mergeFields: MergeFields = {
