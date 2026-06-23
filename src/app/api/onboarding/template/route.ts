@@ -2,24 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  generateWorkspaceFromAnswers,
-  generatedToWorkspaceConfig,
-} from "@/lib/onboarding-ai";
+import { getBlueprint } from "@/lib/templates";
 import {
   validateWorkspaceConfig,
   persistWorkspaceConfig,
 } from "@/lib/workspace-setup";
 
-const answersSchema = z.object({
-  businessType: z.string().min(1).max(200),
-  services: z.string().min(10).max(2000),
-  clientJourney: z.string().min(10).max(2000),
-  painPoints: z.string().min(5).max(2000),
-  tone: z.enum(["formal", "professional", "friendly"]),
-  teamSize: z.string().min(1).max(50),
+const bodySchema = z.object({
+  blueprintId: z.string().min(1),
 });
 
+// On-ramp #1: deterministic curated template. No AI call.
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -27,12 +20,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const parsed = answersSchema.safeParse(body);
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0].message },
       { status: 400 }
     );
+  }
+
+  const blueprint = getBlueprint(parsed.data.blueprintId);
+  if (!blueprint) {
+    return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
   const member = await prisma.workspaceMember.findFirst({
@@ -51,24 +49,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Call Claude to generate the configuration
-  const generated = await generateWorkspaceFromAnswers(parsed.data);
-  if (!generated) {
-    return NextResponse.json(
-      { error: "Failed to generate workspace. Please try again or skip setup." },
-      { status: 502 }
-    );
-  }
-
-  // Normalize → validate → persist through the shared path
+  // Validate the curated config through the same gate as AI output.
   let config;
   try {
-    config = validateWorkspaceConfig(generatedToWorkspaceConfig(generated));
+    config = validateWorkspaceConfig(blueprint.config);
   } catch (err) {
-    console.error("[Onboarding generate] Invalid generated config:", err);
+    console.error("[Onboarding template] Invalid blueprint config:", err);
     return NextResponse.json(
-      { error: "Generated workspace was invalid. Please try again." },
-      { status: 502 }
+      { error: "Template configuration is invalid" },
+      { status: 500 }
     );
   }
 
@@ -76,7 +65,7 @@ export async function POST(req: NextRequest) {
     await persistWorkspaceConfig(member.workspaceId, config);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[Onboarding generate] DB error:", err);
+    console.error("[Onboarding template] DB error:", err);
     return NextResponse.json(
       { error: "Failed to save workspace configuration" },
       { status: 500 }
