@@ -198,6 +198,7 @@ export function QuestionnaireForm() {
               value={answers.businessType}
               onChange={(e) => update("businessType", e.target.value)}
               autoFocus
+              maxLength={500}
               className="h-11"
             />
             <p className="text-xs text-muted-foreground">
@@ -219,6 +220,7 @@ export function QuestionnaireForm() {
               onChange={(e) => update("services", e.target.value)}
               autoFocus
               rows={5}
+              maxLength={2000}
               className="resize-none"
             />
             <p className="text-xs text-muted-foreground">
@@ -240,6 +242,7 @@ export function QuestionnaireForm() {
               onChange={(e) => update("clientJourney", e.target.value)}
               autoFocus
               rows={5}
+              maxLength={2000}
               className="resize-none"
             />
             <p className="text-xs text-muted-foreground">
@@ -261,6 +264,7 @@ export function QuestionnaireForm() {
               onChange={(e) => update("painPoints", e.target.value)}
               autoFocus
               rows={5}
+              maxLength={2000}
               className="resize-none"
             />
             <p className="text-xs text-muted-foreground">

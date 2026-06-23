@@ -12,13 +12,24 @@ import {
 } from "@/lib/workspace-setup";
 
 const answersSchema = z.object({
-  businessType: z.string().min(1).max(200),
+  // Step 1 invites detail ("be as specific as you like"), so allow a sentence
+  // or two rather than a tight 200-char cap.
+  businessType: z.string().min(1).max(500),
   services: z.string().min(10).max(2000),
   clientJourney: z.string().min(10).max(2000),
   painPoints: z.string().min(5).max(2000),
   tone: z.enum(["formal", "professional", "friendly"]),
   teamSize: z.string().min(1).max(50),
 });
+
+const FIELD_LABELS: Record<string, string> = {
+  businessType: "Business type",
+  services: "Services",
+  clientJourney: "Client journey",
+  painPoints: "Pain points",
+  tone: "Tone",
+  teamSize: "Team size",
+};
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -29,8 +40,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = answersSchema.safeParse(body);
   if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = FIELD_LABELS[String(issue.path[0])] ?? "Answer";
     return NextResponse.json(
-      { error: parsed.error.issues[0].message },
+      { error: `${field}: ${issue.message}` },
       { status: 400 }
     );
   }
