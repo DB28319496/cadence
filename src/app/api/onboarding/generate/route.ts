@@ -12,9 +12,9 @@ import {
 } from "@/lib/workspace-setup";
 
 const answersSchema = z.object({
-  // Step 1 invites detail ("be as specific as you like"), so allow a sentence
-  // or two rather than a tight 200-char cap.
-  businessType: z.string().min(1).max(500),
+  // Step 1 invites detail ("be as specific as you like"), so allow a full
+  // paragraph — consistent with the other free-text fields.
+  businessType: z.string().min(1).max(2000),
   services: z.string().min(10).max(2000),
   clientJourney: z.string().min(10).max(2000),
   painPoints: z.string().min(5).max(2000),

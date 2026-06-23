@@ -198,7 +198,7 @@ export function QuestionnaireForm() {
               value={answers.businessType}
               onChange={(e) => update("businessType", e.target.value)}
               autoFocus
-              maxLength={500}
+              maxLength={2000}
               className="h-11"
             />
             <p className="text-xs text-muted-foreground">
