@@ -22,7 +22,12 @@ export default async function OnboardingPage() {
   }
 
   const blueprints = listBlueprintSummaries();
-  const aiAvailable = !!process.env.ANTHROPIC_API_KEY;
+  // AI on-ramps require the key AND can be disabled per-environment. On Netlify
+  // the synchronous generator exceeds the function timeout, so they're gated by
+  // ONBOARDING_AI_DISABLED until the async background flow is in place.
+  const aiAvailable =
+    !!process.env.ANTHROPIC_API_KEY &&
+    process.env.ONBOARDING_AI_DISABLED !== "true";
 
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col">
