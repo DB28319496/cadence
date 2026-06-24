@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { WorkspaceConfigInput } from "@/lib/workspace-config";
+// Relative (not "@/") so this module bundles cleanly inside a standalone
+// Netlify background function, which doesn't resolve the tsconfig path alias.
+import type { WorkspaceConfigInput } from "./workspace-config";
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })

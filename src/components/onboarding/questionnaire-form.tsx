@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { pollOnboardingStatus } from "./poll-status";
 
 type Answers = {
   businessType: string;
@@ -112,6 +113,24 @@ export function QuestionnaireForm() {
         toast.error(json.error || "Failed to generate your workspace");
         return;
       }
+
+      // Serverless: generation runs in the background — poll until it's ready.
+      if (json.status === "processing") {
+        const result = await pollOnboardingStatus();
+        if (result === "done") {
+          toast.success("Your workspace is ready!");
+          router.push("/dashboard");
+          router.refresh();
+        } else if (result === "failed") {
+          toast.error("We couldn't build your workspace. Please try again.");
+        } else {
+          toast.error(
+            "This is taking longer than expected. Check your dashboard in a moment."
+          );
+        }
+        return;
+      }
+
       toast.success("Your workspace is ready!");
       router.push("/dashboard");
       router.refresh();

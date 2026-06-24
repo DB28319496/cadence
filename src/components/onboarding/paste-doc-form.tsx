@@ -7,6 +7,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { pollOnboardingStatus } from "./poll-status";
 
 const MAX_CHARS = 12_000;
 const MIN_CHARS = 40;
@@ -33,6 +34,24 @@ export function PasteDocForm() {
         toast.error(json.error || "Couldn't build a workspace from that text");
         return;
       }
+
+      // Serverless: extraction + generation run in the background — poll.
+      if (json.status === "processing") {
+        const result = await pollOnboardingStatus();
+        if (result === "done") {
+          toast.success("Your workspace is ready!");
+          router.push("/dashboard");
+          router.refresh();
+        } else if (result === "failed") {
+          toast.error("We couldn't build a workspace from that. Please try again.");
+        } else {
+          toast.error(
+            "This is taking longer than expected. Check your dashboard in a moment."
+          );
+        }
+        return;
+      }
+
       toast.success("Your workspace is ready!");
       router.push("/dashboard");
       router.refresh();
