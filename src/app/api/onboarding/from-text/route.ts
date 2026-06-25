@@ -12,6 +12,11 @@ import {
   validateWorkspaceConfig,
   persistWorkspaceConfig,
 } from "@/lib/workspace-setup";
+import {
+  runsAsync,
+  requestOrigin,
+  triggerBackgroundGeneration,
+} from "@/lib/onboarding-trigger";
 
 export const MAX_DOC_CHARS = 12_000;
 
@@ -68,6 +73,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Serverless: offload extraction + generation to a background function.
+  if (runsAsync()) {
+    await triggerBackgroundGeneration({
+      workspaceId: member.workspaceId,
+      origin: requestOrigin(req),
+      kind: "text",
+      text: parsed.data.text,
+    });
+    return NextResponse.json({ status: "processing" });
+  }
+
+  // Inline path (local dev / long-running hosts).
   // Step A — extract the six fields from the pasted text.
   const answers = await extractOnboardingAnswers(parsed.data.text);
   if (!answers) {

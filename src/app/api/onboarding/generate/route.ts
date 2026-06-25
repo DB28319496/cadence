@@ -10,6 +10,11 @@ import {
   validateWorkspaceConfig,
   persistWorkspaceConfig,
 } from "@/lib/workspace-setup";
+import {
+  runsAsync,
+  requestOrigin,
+  triggerBackgroundGeneration,
+} from "@/lib/onboarding-trigger";
 
 const answersSchema = z.object({
   // Step 1 invites detail ("be as specific as you like"), so allow a full
@@ -64,7 +69,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Call Claude to generate the configuration
+  // Serverless: offload the ~84s Claude call to a background function and let
+  // the client poll /api/onboarding/status for completion.
+  if (runsAsync()) {
+    await triggerBackgroundGeneration({
+      workspaceId: member.workspaceId,
+      origin: requestOrigin(req),
+      kind: "answers",
+      answers: parsed.data,
+    });
+    return NextResponse.json({ status: "processing" });
+  }
+
+  // Inline path (local dev / long-running hosts with no function timeout).
   const generated = await generateWorkspaceFromAnswers(parsed.data);
   if (!generated) {
     return NextResponse.json(
@@ -73,7 +90,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Normalize → validate → persist through the shared path
   let config;
   try {
     config = validateWorkspaceConfig(generatedToWorkspaceConfig(generated));
