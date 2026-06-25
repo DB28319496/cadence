@@ -1,6 +1,5 @@
 "use client";
 
-import { signOutAction } from "@/lib/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -103,7 +102,9 @@ export function Header({ workspaceName, userName, userEmail, userImage, workspac
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive cursor-pointer"
-            onClick={() => signOutAction()}
+            onClick={() => {
+              window.location.href = "/api/signout";
+            }}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Sign out

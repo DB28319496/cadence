@@ -35,6 +35,7 @@ export const authConfig: NextAuthConfig = {
         "/forgot-password",
         "/reset-password",
         "/api/auth",
+        "/api/signout",
         "/api/widget",
         "/api/portal",
         "/api/invitations/accept",
