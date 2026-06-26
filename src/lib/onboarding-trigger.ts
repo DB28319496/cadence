@@ -8,9 +8,18 @@
 import type { OnboardingAnswers } from "@/lib/onboarding-ai";
 import { setOnboardingStatus } from "@/lib/onboarding-status";
 
-/** True when AI generation must be offloaded (serverless function timeout). */
+/**
+ * True when AI generation must be offloaded to the background function
+ * (serverless function timeout). Driven by an explicit env var set in Netlify
+ * (ONBOARDING_ASYNC=true) because process.env.NETLIFY isn't reliably present at
+ * function runtime. Falls back to NETLIFY/VERCEL detection.
+ */
 export function runsAsync(): boolean {
-  return !!process.env.NETLIFY;
+  return (
+    process.env.ONBOARDING_ASYNC === "true" ||
+    !!process.env.NETLIFY ||
+    !!process.env.VERCEL
+  );
 }
 
 /** Public origin of the current deploy, for calling same-host endpoints. */
