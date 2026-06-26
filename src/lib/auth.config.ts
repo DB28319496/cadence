@@ -36,6 +36,7 @@ export const authConfig: NextAuthConfig = {
         "/reset-password",
         "/api/auth",
         "/api/signout",
+        "/api/onboarding/finalize", // internal, secret-gated (called by bg function)
         "/api/widget",
         "/api/portal",
         "/api/invitations/accept",
