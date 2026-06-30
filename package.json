@@ -12,7 +12,8 @@
     "starter-templates": "tsx prisma/starter-templates.ts",
     "test:setup": "tsx scripts/test-workspace-setup.ts",
     "itest:persist": "tsx scripts/itest-template-persist.ts",
-    "itest:paste": "tsx scripts/itest-paste-doc.ts"
+    "itest:paste": "tsx scripts/itest-paste-doc.ts",
+    "itest:setup": "tsx scripts/itest-setup-engine.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

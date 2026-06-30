@@ -488,3 +488,46 @@ model PasswordResetToken {
   @@index([token])
   @@index([email])
 }
+
+// ==================== SWITCHBOARD SETUP ENGINE ====================
+// Internal client-provisioning pipeline that takes a Switchboard client from
+// intake -> live as a state machine. Named `SwitchboardClient` (not `Client`)
+// to avoid colliding with the CRM `Client` model above. Console lives at /setup.
+// Secrets are NEVER modeled here — they come from env. `config` holds business
+// data + non-secret external IDs (agentId, eventTypeIds, phone number) only.
+
+model SwitchboardClient {
+  id           String   @id @default(cuid())
+  businessName String
+  vertical     String   // auto | hvac | home_services
+  status       String   @default("onboarding") // onboarding | live | paused
+  config       Json?    // generated config object (business data + non-secret IDs only)
+  systemPrompt String?  // generated agent prompt
+  createdAt    DateTime @default(now())
+  run          OnboardingRun?
+}
+
+model OnboardingRun {
+  id          String    @id @default(cuid())
+  clientId    String    @unique
+  client      SwitchboardClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  status      String    @default("draft") // draft | running | blocked | live | failed
+  currentStep String?   // the step key currently pending
+  startedAt   DateTime?
+  completedAt DateTime?
+  steps       ProvisioningStep[]
+}
+
+model ProvisioningStep {
+  id        String   @id @default(cuid())
+  runId     String
+  run       OnboardingRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  key       String   // intake | generate_config | ... | go_live
+  type      String   // auto | manual
+  status    String   @default("pending") // pending | running | done | blocked | failed | skipped
+  result    Json?    // logs, external IDs, LLM output, error messages
+  attempts  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([runId, key])
+}
