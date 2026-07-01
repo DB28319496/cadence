@@ -251,16 +251,18 @@ const QA_TOOL: Anthropic.Tool = {
   },
 };
 
-const QA_SYSTEM = `You QA a Switchboard AI front-desk agent before it goes live. List every reliability risk, each with a one-line fix, then give a go/no-go.
+const QA_SYSTEM = `You QA a Switchboard AI front-desk agent before it goes live. List every reliability risk you find, each with a one-line fix. Then give a go/no-go.
 
-Look specifically for:
-- Missing FAQ a caller will likely ask.
-- Prices quotable too precisely (exact figures instead of ranges).
-- A hot-job condition the prompt doesn't cover.
-- A booking field the calendar needs but the prompt doesn't collect.
-- Timezone or hours ambiguity.
+Reserve "no-go" for issues that WILL cause a real failure on a live call:
+- A safety branch missing or wrong (e.g. gas smell, unsafe-to-drive).
+- Prices quoted as exact figures instead of ranges, or a price that contradicts the config.
+- A booking field the calendar/booking flow requires but the prompt never collects.
+- A hot-job or escalation condition that is left uncovered.
+- A concrete scheduling error (e.g. hours that contradict themselves, or a genuine cross-timezone booking error).
 
-Give "no-go" if any risk would cause a wrong booking, a bad price quote, or a safety miss. Otherwise "go". Output strictly via the tool.`;
+Everything else is ADVISORY: still list it as a flag with a fix, but return "go". In particular, a missing FAQ (warranty, payment methods, service duration, etc.), a nice-to-have addition, or minor wording/timezone polish are NOT grounds for "no-go" on their own — the agent can escalate or take a message for anything it doesn't know.
+
+Only return "no-go" when a caller would actually get a wrong booking, a bad price, or a safety miss. Output strictly via the tool.`;
 
 export async function qaReview(
   prompt: string,
