@@ -251,6 +251,33 @@ async function main() {
     assert(run.currentStep === "forwarding", "re-settled at forwarding (provisioning not redone)");
   }
 
+  // ── Scenario 8: stepwise (serverless-safe) one-step-per-call advance ──────
+  console.log("\n[8] Stepwise advance — one auto step per call (serverless mode)");
+  {
+    const { advanceRun } = await import("../src/lib/engine");
+    process.env.SWITCHBOARD_ASYNC = "true"; // create advances exactly one step
+    const { runId, clientId } = await createRunFromIntake({
+      mode: "paste",
+      text: "Business name: Step Test Auto\nAuto shop in Springfield. Open Mon-Fri 8-6.",
+    });
+    process.env.SWITCHBOARD_ASYNC = ""; // reset so other logic is unaffected
+    createdClientIds.push(clientId);
+
+    let run = (await load(runId))!;
+    assert(run.status === "running", "async create advanced exactly one step (still running)");
+    assert(stepStatus(run, "generate_config") === "done", "generate_config done after 1 step");
+    assert(stepStatus(run, "generate_prompt") === "pending", "generate_prompt still pending (1 step only)");
+
+    // Drive the rest one step at a time, like the run-page poller does.
+    let guard = 0;
+    while (run.status === "running" && guard++ < 25) {
+      await advanceRun(runId, { maxSteps: 1 });
+      run = (await load(runId))!;
+    }
+    assert(run.currentStep === "forwarding", "stepwise driver reached forwarding");
+    assert(stepStatus(run, "qa_review") === "done", "qa_review done via stepwise driver");
+  }
+
   // ── Cleanup ───────────────────────────────────────────────────────────────
   console.log("\n[cleanup] removing test clients (cascades runs + steps)");
   await prisma.switchboardClient.deleteMany({ where: { id: { in: createdClientIds } } });

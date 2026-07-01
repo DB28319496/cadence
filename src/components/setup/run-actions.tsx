@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,40 @@ export function RunPoller({ active, intervalMs = 4000 }: { active: boolean; inte
     const id = setInterval(() => router.refresh(), intervalMs);
     return () => clearInterval(id);
   }, [active, intervalMs, router]);
+  return null;
+}
+
+/**
+ * While the run is `running`, drive it one step per request (serverless-safe:
+ * each step is a single Claude call, well under the function timeout), refreshing
+ * the view after each. Stops automatically once the run rests (blocked/failed/live)
+ * — `active` flips false and the effect tears down. Calls never overlap.
+ */
+export function AutoAdvancer({ runId, active }: { runId: string; active: boolean }) {
+  const router = useRouter();
+  const busy = useRef(false);
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    const tick = async () => {
+      if (busy.current || cancelled) return;
+      busy.current = true;
+      try {
+        await fetch(`/api/setup/runs/${runId}/advance`, { method: "POST" });
+      } catch {
+        // transient — next tick retries
+      } finally {
+        busy.current = false;
+      }
+      if (!cancelled) router.refresh();
+    };
+    tick(); // kick immediately, don't wait a full interval
+    const id = setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [active, runId, router]);
   return null;
 }
 

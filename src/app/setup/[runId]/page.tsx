@@ -11,6 +11,7 @@ import {
   A2PForm,
   ConfigEditor,
   RunPoller,
+  AutoAdvancer,
 } from "@/components/setup/run-actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,19 +62,20 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
   const config = (client.config ?? null) as Record<string, unknown> | null;
   const watchUntil = config?.watch_until as string | undefined;
 
-  // Poll the view while background work is in flight: a running engine pass, or
-  // an A2P submission awaiting approval (advances out-of-band via the QStash poll).
+  // While the run is "running", drive it one step per request (serverless-safe).
+  // Separately, poll-refresh while an A2P submission awaits out-of-band approval.
   const a2pStep = steps.find((s) => s.key === "a2p");
   const a2pAwaiting =
     a2pStep?.status === "blocked" && !!(a2pStep.result as { brandSid?: string } | null)?.brandSid;
-  const pollActive =
-    run.status === "running" || (a2pAwaiting && run.status !== "live" && run.status !== "failed");
+  const autoAdvance = run.status === "running";
+  const a2pPolling = a2pAwaiting && run.status !== "live" && run.status !== "failed";
 
   const pct = Math.round((done / TOTAL) * 100);
 
   return (
     <div className="space-y-6">
-      <RunPoller active={pollActive} />
+      <AutoAdvancer runId={run.id} active={autoAdvance} />
+      <RunPoller active={a2pPolling} />
       <Link href="/setup" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" />
         All runs
