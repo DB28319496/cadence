@@ -8,6 +8,7 @@ import { PIPELINE, getStepDef, type StepKey } from "@/lib/setup/pipeline";
 import { VERTICALS, switchboardConfigSchema, type Vertical } from "@/lib/setup/config-schema";
 import { registerA2P, getA2PStatus } from "@/lib/integrations/twilio";
 import { enqueueDelayed, qstashAvailable } from "@/lib/integrations/qstash";
+import { advanceOpts } from "@/lib/setup/async";
 
 const A2P_POLL_DELAY_SECONDS = 300;
 const appUrl = () =>
@@ -94,7 +95,7 @@ export async function createRunFromIntake(
     },
   });
 
-  await advanceRun(run.id);
+  await advanceRun(run.id, advanceOpts());
   return { runId: run.id, clientId: client.id };
 }
 
@@ -104,7 +105,7 @@ export async function retryStep(runId: string, key: StepKey) {
     where: { runId_key: { runId, key } },
     data: { status: "pending", result: { retriedAt: new Date().toISOString() } },
   });
-  return advanceRun(runId);
+  return advanceRun(runId, advanceOpts());
 }
 
 /** Operator marks a manual task done -> resume the run. */
@@ -126,7 +127,7 @@ export async function markStepDone(runId: string, key: StepKey) {
       result: { ...prev, markedDoneAt: new Date().toISOString() } as Prisma.InputJsonValue,
     },
   });
-  return advanceRun(runId);
+  return advanceRun(runId, advanceOpts());
 }
 
 /**
@@ -217,7 +218,7 @@ export async function pollA2P(runId: string) {
         result: { ...result, status: "approved", approvedAt: new Date().toISOString() } as Prisma.InputJsonValue,
       },
     });
-    return advanceRun(runId);
+    return advanceRun(runId, advanceOpts());
   }
 
   if (status === "rejected") {
@@ -225,7 +226,7 @@ export async function pollA2P(runId: string) {
       where: { runId_key: { runId, key: "a2p" } },
       data: { status: "failed", result: { ...result, status: "rejected" } as Prisma.InputJsonValue },
     });
-    return advanceRun(runId); // engine flips the run to failed
+    return advanceRun(runId, advanceOpts()); // engine flips the run to failed
   }
 
   // Still pending — reschedule the next poll if QStash is wired up.
@@ -271,7 +272,7 @@ export async function updateConfigAndRerun(runId: string, config: unknown) {
     data: { status: "pending", result: Prisma.JsonNull },
   });
 
-  return advanceRun(runId);
+  return advanceRun(runId, advanceOpts());
 }
 
 /** Edit the intake text, reset the brain steps, and re-run from generate_config. */
@@ -299,5 +300,5 @@ export async function updateIntakeAndRerun(runId: string, intakeText: string) {
     data: { status: "pending", result: Prisma.JsonNull },
   });
 
-  return advanceRun(runId);
+  return advanceRun(runId, advanceOpts());
 }

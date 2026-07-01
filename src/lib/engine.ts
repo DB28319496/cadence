@@ -56,12 +56,20 @@ async function setRun(runId: string, status: RunStatus, currentStep: string | nu
 }
 
 /**
- * Drive a run as far as it will go. Returns the run (with steps) in its resting
- * state: `blocked` (manual task or missing/no-go), `failed` (handler error), or
- * `live` (all steps done). Safe to call repeatedly — it always recomputes from
- * persisted state, so it doubles as the resume-after-task-completion entrypoint.
+ * Drive a run forward. Returns the run (with steps) in its resting state:
+ * `blocked` (manual task or missing/no-go), `failed` (handler error), `live`
+ * (all steps done), or `running` when `maxSteps` caps how many auto steps run in
+ * this call. Safe to call repeatedly — it always recomputes from persisted state,
+ * so it's both the resume entrypoint and (with maxSteps:1) the serverless-safe
+ * one-step-per-request driver.
  */
-export async function advanceRun(runId: string) {
+export async function advanceRun(
+  runId: string,
+  opts: { maxSteps?: number } = {}
+) {
+  const maxSteps = opts.maxSteps ?? Number.MAX_SAFE_INTEGER;
+  let executed = 0;
+
   // First touch: stamp startedAt and flip draft -> running.
   const initial = await prisma.onboardingRun.findUnique({ where: { id: runId } });
   if (!initial) throw new Error(`OnboardingRun ${runId} not found`);
@@ -175,7 +183,17 @@ export async function advanceRun(runId: string) {
       data: { status: outcome.status, result: asJson(outcome.result) },
     });
 
-    if (outcome.status === "done") continue; // advance to the next step
+    if (outcome.status === "done") {
+      // Budget cap (serverless one-step-per-request): stop after N auto steps,
+      // leaving the run `running` so the caller/poller drives the next one.
+      if (++executed >= maxSteps) {
+        return (await prisma.onboardingRun.findUnique({
+          where: { id: runId },
+          include: { steps: true },
+        }))!;
+      }
+      continue; // advance to the next step
+    }
     return setRun(runId, outcome.status === "failed" ? "failed" : "blocked", next.key);
   }
 
