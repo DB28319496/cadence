@@ -1,37 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cadence
 
-## Getting Started
+Multi-tenant B2B SaaS for managing client onboarding end to end — from first contact through project completion.
 
-First, run the development server:
+**Status:** multi-phase build · `OnboardFlow` is its marketing front-end
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## What it does
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Client CRM** — accounts, contacts, and per-client state
+- **Onboarding templates** — reusable playbooks applied per client
+- **Pipeline management** — where every client sits in the onboarding flow
+- **Client portal** — the customer's own view of their onboarding
+- **Switchboard Setup Engine** — a 12-step provisioning state machine that uses LLM steps to generate configuration, then auto-provisions the client's stack:
+  - a Retell/Vapi voice agent
+  - Cal.com event types
+  - a Twilio phone number
+  - n8n workflow registration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Why it exists
 
-## Learn More
+Onboarding a service business onto a voice-agent product involves a dozen manual configuration steps across four vendors. Getting that wrong is how onboarding stalls. The setup engine turns it into one guided flow with an auditable step-by-step state machine, so a stalled client shows exactly which step failed and why.
 
-To learn more about Next.js, take a look at the following resources:
+## Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Next.js · TypeScript · Prisma + libSQL/Turso · Auth.js · Anthropic SDK · Twilio · Cal.com · n8n · Retell · Docker
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
+- **Multi-tenant** — every query is scoped per tenant; no cross-client data paths
+- **Provisioning as a state machine** — each of the 12 steps records its own status, so a run can be inspected and resumed rather than restarted blind
+- **LLM steps are bounded** — the model generates configuration values inside a fixed schema; it does not drive control flow
